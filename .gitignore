@@ -1,0 +1,6 @@
+venv/
+.terraform/
+build/
+dependency/
+open-source/
+
