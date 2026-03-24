@@ -11,6 +11,9 @@ It captures live video, streams it to AWS Kinesis Video Streams, performs analyt
 
 ## Architecture
 
+![Alt text](architecture.png)
+
+
 
 
 ---
