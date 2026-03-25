@@ -22,11 +22,11 @@ resource "aws_secretsmanager_secret" "opensearch" {
 
 resource "random_password" "opensearch" {
   length           = 16
-  
-  min_upper   = 1
-  min_lower   = 1
-  min_numeric = 1
-  min_special = 1
+
+  min_upper        = 1
+  min_lower        = 1
+  min_numeric      = 1
+  min_special      = 1
 
   special          = true
   override_special = "!@#%^&*()-_=+"
