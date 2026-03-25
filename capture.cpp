@@ -17,13 +17,13 @@ using namespace cv;
 using namespace com::amazonaws::kinesis::video;
 
 class EmptyClientCallbackProvider : public ClientCallbackProvider {
-public:
-    UINT64 getCallbackCustomData() override { return 0; }
+    public:
+        UINT64 getCallbackCustomData() override { return 0; }
 };
 
 class EmptyStreamCallbackProvider : public StreamCallbackProvider {
-public:
-    UINT64 getCallbackCustomData() override { return 0; }
+    public:
+        UINT64 getCallbackCustomData() override { return 0; }
 };
 
 int main() {
