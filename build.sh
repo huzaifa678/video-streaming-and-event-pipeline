@@ -5,6 +5,7 @@ SDK_PATH=~/Downloads/amazon-kinesis-video-streams-producer-sdk-cpp
 export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 clang++ ../video-streaming-service/capture.cpp -std=c++17 \
+  -I/opt/homebrew/include \
   -I/usr/local/src \
   -I$SDK_PATH/open-source/local/include \
   -I$SDK_PATH/dependency/libkvscproducer/kvscproducer-src/src/include \
@@ -18,16 +19,21 @@ clang++ ../video-streaming-service/capture.cpp -std=c++17 \
   -I$SDK_PATH/dependency/libkvscproducer/kvscproducer-src/dependency/libkvspic/kvspic-src/src/trace/include \
   -I$SDK_PATH/dependency/libkvscproducer/kvscproducer-src/dependency/libkvspic/kvspic-src/src/signaling/include \
   -I$SDK_PATH/dependency/libkvscproducer/kvscproducer-src/dependency/libkvspic/kvspic-src/src/streaming/include \
-  $(pkg-config --cflags libavcodec libavutil libavformat opencv4) \
-  -L$SDK_PATH/build/dependency/libkvscproducer/kvscproducer-src \
+  $(pkg-config --cflags opencv4) \
   -L$SDK_PATH/open-source/local/lib \
-  -Wl,-rpath,$SDK_PATH/build/dependency/libkvscproducer/kvscproducer-src \
+  -L$SDK_PATH/build/dependency/libkvscproducer/kvscproducer-src \
+  -L/opt/homebrew/lib \
   -Wl,-rpath,$SDK_PATH/open-source/local/lib \
+  -Wl,-rpath,$SDK_PATH/build/dependency/libkvscproducer/kvscproducer-src \
   -Wl,-rpath,/opt/homebrew/lib \
-  -Wl,-rpath,@loader_path/build \
-  -lKinesisVideoProducer -lcproducer -lkvsCommonCurl \
+  -lKinesisVideoProducer \
+  -lcproducer \
+  -lkvsCommonCurl \
+  -llog4cplus \
+  -lswscale \
+  -lswresample \
   -lcurl \
-  $(pkg-config --libs libavcodec libavutil libavformat opencv4) \
+  $(pkg-config --libs opencv4 libavcodec libavutil libavformat) \
   -o kvs_app
 
 # clang++ ../video-streaming-service/camera_2.cpp -std=c++17 \

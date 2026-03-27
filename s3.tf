@@ -31,3 +31,12 @@ resource "aws_s3_object" "rekognition_etl_script" {
   source = "${path.module}/scripts/rekognition_etl.py"  
   etag   = filemd5("${path.module}/scripts/rekognition_etl.py")
 }
+
+resource "aws_s3_bucket" "face_images" {
+  bucket = "${var.project_name}-face-image"
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.env
+  }
+}

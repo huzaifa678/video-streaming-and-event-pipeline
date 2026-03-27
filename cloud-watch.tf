@@ -8,8 +8,8 @@ resource "aws_cloudwatch_log_group" "lambda_processing_logs" {
   retention_in_days = 30
 }
 
-resource "aws_cloudwatch_log_group" "lambda_result_logs" {
-  name              = "/aws/lambda/${var.project_name}-result"
+resource "aws_cloudwatch_log_group" "lambda_glue_logs" {
+  name              = "/aws/lambda/${var.project_name}-glue"
   retention_in_days = 30
 }
 

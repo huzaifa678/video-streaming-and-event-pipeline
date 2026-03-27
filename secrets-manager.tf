@@ -12,6 +12,12 @@ resource "aws_secretsmanager_secret_version" "redshift" {
 
 resource "random_password" "redshift" {
   length           = 16
+  numeric          = true
+  upper            = true
+  lower            = true
+  min_numeric      = 1
+  min_upper        = 1
+  min_lower        = 1
   special          = true
   override_special = "!#$%^&*()-_=+"
 }

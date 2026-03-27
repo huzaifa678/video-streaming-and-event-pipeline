@@ -26,7 +26,7 @@ resource "aws_rekognition_stream_processor" "video_processor" {
 
   settings {
     face_search {
-      collection_id       = aws_rekognition_collection.faces.collection_id
+      collection_id        = aws_rekognition_collection.faces.collection_id
       face_match_threshold = 85.0
     }
   }
@@ -40,4 +40,11 @@ resource "aws_rekognition_stream_processor" "video_processor" {
       data_sharing_preference
     ]
   }
+}
+
+resource "aws_s3_object" "user_face" {
+  bucket = aws_s3_bucket.face_images.id
+  key    = "faces/user1.jpg"
+  source = "${path.module}/faces/user1.jpg"
+  etag   = filemd5("${path.module}/faces/myface.jpg")
 }
