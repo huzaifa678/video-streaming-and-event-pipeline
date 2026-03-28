@@ -22,6 +22,12 @@ data "archive_file" "start_glue_zip" {
   output_path = "${path.module}/builds/start_glue.zip"
 }
 
+data "archive_file" "index_faces_zip" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/index_faces.py"
+  output_path = "${path.module}/builds/index_faces.zip"
+}
+
 data "archive_file" "python_lib_zip" {
   type        = "zip"
   source_dir = "${path.module}/python_layer"
@@ -80,6 +86,7 @@ resource "aws_lambda_function" "processing" {
         REDSHIFT_HOST       = aws_redshift_cluster.main.endpoint
         OPENSEARCH_ENDPOINT = aws_opensearch_domain.video_events.endpoint 
         KINESIS_STREAM      = aws_kinesis_stream.video_events.name
+        SQS_QUEUE_URL       = aws_sqs_queue.video_events_dlq.id
     }
   }
 
@@ -117,6 +124,7 @@ resource "aws_lambda_function" "query_lambda" {
         REDSHIFT_SECRET_ARN = aws_secretsmanager_secret.redshift.arn
         REDSHIFT_HOST       = aws_redshift_cluster.main.endpoint
         OPENSEARCH_ENDPOINT = aws_opensearch_domain.video_events.endpoint 
+        SQS_QUEUE_URL       = aws_sqs_queue.video_events_dlq.id
     }
   }
 
@@ -141,10 +149,43 @@ resource "aws_lambda_function" "start_glue" {
   environment {
     variables = {
       GLUE_JOB_NAME = aws_glue_job.rekognition_to_redshift.name
+      SQS_QUEUE_URL = aws_sqs_queue.video_events_dlq.id
     }
   }
 
   layers = [aws_lambda_layer_version.python_dependencies.arn]
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.video_events_dlq.arn
+  }
+}
+
+resource "aws_lambda_function" "index_faces" {
+  function_name = "${var.project_name}-index-faces"
+  filename      = data.archive_file.index_faces_zip.output_path
+  handler       = "index_faces.lambda_handler"
+  runtime       = "python3.11"
+  role          = aws_iam_role.lambda_exec.arn
+  timeout       = 30
+  memory_size   = 256
+
+  source_code_hash = filebase64sha256(data.archive_file.index_faces_zip.output_path)
+
+  environment {
+    variables = {
+      COLLECTION_ID = aws_rekognition_collection.faces.id
+      SQS_QUEUE_URL = aws_sqs_queue.video_events_dlq.id
+    }
+  }
+
+  layers = [
+    aws_lambda_layer_version.python_dependencies.arn
+  ]
+
+  tracing_config {
+    mode = "Active"
+  }
+
 
   dead_letter_config {
     target_arn = aws_sqs_queue.video_events_dlq.arn

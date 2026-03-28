@@ -26,7 +26,7 @@ resource "aws_rekognition_stream_processor" "video_processor" {
 
   settings {
     face_search {
-      collection_id        = aws_rekognition_collection.faces.collection_id
+      collection_id        = aws_rekognition_collection.faces.id
       face_match_threshold = 85.0
     }
   }

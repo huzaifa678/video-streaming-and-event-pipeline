@@ -40,3 +40,12 @@ resource "aws_s3_bucket" "face_images" {
     Environment = var.env
   }
 }
+
+resource "aws_s3_bucket_notification" "trigger_lambda" {
+  bucket = aws_s3_bucket.face_images.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.index_faces.arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+}

@@ -8,14 +8,14 @@ resource "aws_glue_job" "rekognition_to_redshift" {
     python_version  = "3"
   }
 
-  default_arguments = {
+    default_arguments = {
     "--TempDir"             = "s3://${aws_s3_bucket.analysis_results.bucket}/temp/"
     "--enable-xray-tracing" = "true"
     "--job-language"        = "python"
-    "--S3_INPUT_PATH" = "s3://${aws_s3_bucket.rekognition_raw.bucket}/raw/rekognition/"
+    "--S3_INPUT_PATH"       = "s3://${aws_s3_bucket.rekognition_raw.bucket}/raw/rekognition/"
     "--REDSHIFT_JDBC_URL"   = "jdbc:redshift://${aws_redshift_cluster.main.endpoint}:5439/videoanalytics"
     "--REDSHIFT_SECRET_ARN" = aws_secretsmanager_secret.redshift.arn
-    "--failure-sqs-arn" = aws_sqs_queue.video_events_dlq.arn
+    "--SQS_QUEUE_URL"       = aws_sqs_queue.video_events_dlq.url
   }
 
   max_retries = 1

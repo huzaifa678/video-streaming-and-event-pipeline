@@ -176,6 +176,23 @@ resource "aws_iam_role_policy_attachment" "lambda_rekognition_attach" {
   policy_arn = aws_iam_policy.lambda_rekognition_policy.arn
 }
 
+resource "aws_iam_role_policy" "lambda_rekognition" {
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "rekognition:IndexFaces"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role" "rekognition_role" {
   name = "${var.project_name}-rekognition-role"
 
