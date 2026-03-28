@@ -55,6 +55,7 @@ resource "aws_s3_bucket_notification" "trigger_lambda" {
   }
 
   depends_on = [
+    aws_lambda_function.index_faces,
     aws_lambda_permission.allow_s3
   ]
 }
