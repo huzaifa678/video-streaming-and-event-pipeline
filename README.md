@@ -41,7 +41,7 @@ export AWS_DEFAULT_REGION=us-east-1
 
 ### Build & Run C++ Producer
 
-Pre-requisites: Make sure to clone the aws kinesis cpp producer repository, build the files and install the build files
+Pre-requisites: Make sure to clone the AWS kinesis cpp producer repository, build the files and install the build files
 
 ```bash
 ./build.sh
