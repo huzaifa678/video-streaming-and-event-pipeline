@@ -191,3 +191,11 @@ resource "aws_lambda_function" "index_faces" {
     target_arn = aws_sqs_queue.video_events_dlq.arn
   }
 }
+
+resource "aws_lambda_permission" "allow_s3" {
+  statement_id  = "AllowExecutionFromS3"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.index_faces.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.face_images.arn
+}

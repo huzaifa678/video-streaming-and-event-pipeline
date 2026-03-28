@@ -39,12 +39,8 @@ def lambda_handler(event, context):
             bucket = record["s3"]["bucket"]["name"]
             key = record["s3"]["object"]["key"]
 
-            logger.info("Processing image", extra={
-                "bucket": bucket,
-                "key": key,
-                "request_id": context.aws_request_id
-            })
-
+            logger.info(f"Processing image bucket={bucket}, key={key}, request_id={context.aws_request_id}")
+            
             with xray_recorder.in_subsegment("RekognitionIndexFaces"):
                 response = rekognition.index_faces(
                     CollectionId=COLLECTION_ID,
