@@ -2,11 +2,16 @@ import sys
 import json
 import logging
 import boto3
+
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.utils import getResolvedOptions
 from awsglue.job import Job
 from pyspark.sql.functions import col, explode
+
+from aws_xray_sdk.core import xray_recorder, patch_all
+
+patch_all()
 
 logger = logging.getLogger("GlueETL")
 logger.setLevel(logging.INFO)
@@ -46,27 +51,55 @@ def send_to_dlq(stage, error_msg, context_data=None):
         logger.error("Failed to send to DLQ", exc_info=True)
 
 
-# -------------------------
-# Get DB credentials
-# -------------------------
-secret = json.loads(
-    secrets_client.get_secret_value(
-        SecretId=args['REDSHIFT_SECRET_ARN']
-    )['SecretString']
-)
+def get_secret():
+    subsegment = None
+    try:
+        subsegment = xray_recorder.begin_subsegment("GetRedshiftSecret")
 
-username = secret["username"]
-password = secret["password"]
+        secret_value = secrets_client.get_secret_value(
+            SecretId=args['REDSHIFT_SECRET_ARN']
+        )
+
+        secret = json.loads(secret_value["SecretString"])
+
+        subsegment.put_annotation("secret_fetched", True)
+
+        return secret["username"], secret["password"]
+
+    except Exception as e:
+        if subsegment:
+            subsegment.put_annotation("secret_error", str(e))
+        raise
+
+    finally:
+        if subsegment:
+            xray_recorder.end_subsegment()
+
 
 try:
+    s3_seg = xray_recorder.begin_subsegment("S3Read")
+
     df = spark.read.json(args['S3_INPUT_PATH'])
-    logger.info(f"Read {df.count()} records from {args['S3_INPUT_PATH']}")
+
+    input_count = df.count()
+
+    s3_seg.put_annotation("input_count", input_count)
+    xray_recorder.end_subsegment()
+
+    logger.info(f"Loaded input records: {input_count}")
+
 except Exception as e:
-    logger.error("Failed to read S3 input", exc_info=True)
+    if s3_seg:
+        s3_seg.put_annotation("s3_read_error", str(e))
+        xray_recorder.end_subsegment()
+
     send_to_dlq("S3_READ", str(e), {"path": args['S3_INPUT_PATH']})
     raise
 
+
 try:
+    transform_seg = xray_recorder.begin_subsegment("Transform")
+
     df_flat = df.select(
         col("InputInformation.KinesisVideo.StreamArn").alias("video_stream"),
         col("InputInformation.KinesisVideo.ProducerTimestamp").alias("timestamp"),
@@ -80,14 +113,26 @@ try:
         col("face_match.MatchedFaces")[0]["Similarity"].alias("similarity")
     ).dropna()
 
-    logger.info(f"Transformed to {df_final.count()} records")
+    transform_seg.put_annotation("status", "success")
+
+    xray_recorder.end_subsegment()
+
+    logger.info("Transformation completed")
 
 except Exception as e:
-    logger.error("Transformation failed", exc_info=True)
+    if transform_seg:
+        transform_seg.put_annotation("transform_error", str(e))
+        xray_recorder.end_subsegment()
+
     send_to_dlq("TRANSFORM", str(e))
     raise
 
+
 try:
+    write_seg = xray_recorder.begin_subsegment("RedshiftWrite")
+
+    username, password = get_secret()
+
     df_final.write \
         .format("jdbc") \
         .option("url", args['REDSHIFT_JDBC_URL']) \
@@ -98,10 +143,17 @@ try:
         .mode("append") \
         .save()
 
-    logger.info("Successfully wrote data to Redshift")
+    write_seg.put_annotation("status", "success")
+
+    xray_recorder.end_subsegment()
+
+    logger.info("Successfully wrote to Redshift")
 
 except Exception as e:
-    logger.error("Redshift write failed", exc_info=True)
+    if write_seg:
+        write_seg.put_annotation("write_error", str(e))
+        xray_recorder.end_subsegment()
+
     send_to_dlq("REDSHIFT_WRITE", str(e))
     raise
 

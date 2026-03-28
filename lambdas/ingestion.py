@@ -71,9 +71,10 @@ def lambda_handler(event, context):
     except ClientError as e:
         logger.error("AWS ClientError in ingestion Lambda", exc_info=True)
 
-        xray_recorder.current_segment().add_annotation(
-            "kinesis_error", str(e)
-        )
+        subsegment = xray_recorder.begin_subsegment("KinesisClientError")
+        subsegment.put_annotation("kinesis_error", str(e))
+        xray_recorder.end_subsegment()
+
 
         send_to_dlq(event, str(e))
 
@@ -85,9 +86,9 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error("Unhandled exception in ingestion Lambda", exc_info=True)
 
-        xray_recorder.current_segment().add_annotation(
-            "ingestion_error", str(e)
-        )
+        subsegment = xray_recorder.begin_subsegment("IngestionError")
+        subsegment.put_annotation("ingestion_error", str(e))
+        xray_recorder.end_subsegment()
 
         send_to_dlq(event, str(e))
 

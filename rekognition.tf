@@ -41,10 +41,3 @@ resource "aws_rekognition_stream_processor" "video_processor" {
     ]
   }
 }
-
-resource "aws_s3_object" "user_face" {
-  bucket = aws_s3_bucket.face_images.id
-  key    = "faces/user1.jpg"
-  source = "${path.module}/faces/myface.jpg"
-  etag   = filemd5("${path.module}/faces/myface.jpg")
-}

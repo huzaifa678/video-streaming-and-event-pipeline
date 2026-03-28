@@ -17,8 +17,8 @@ sqs_client = boto3.client("sqs")
 
 
 def send_to_dlq(event, error_msg):
-    if DLQ_URL:
-        try:
+    try:
+        if DLQ_URL:
             sqs_client.send_message(
                 QueueUrl=DLQ_URL,
                 MessageBody=json.dumps({
@@ -26,21 +26,29 @@ def send_to_dlq(event, error_msg):
                     "error": error_msg
                 })
             )
-        except Exception as e:
-            logger.error("Failed to send to DLQ", exc_info=True)
-            xray_recorder.current_subsegment().add_exception(e)
+    except Exception as e:
+        logger.error("Failed to send to DLQ", exc_info=True)
 
 
 def lambda_handler(event, context):
     logger.info("S3 event received", extra={"event": event})
 
+    subsegment = None
+
     try:
-        with xray_recorder.in_subsegment("StartGlueJob"):
-            response = glue_client.start_job_run(
-                JobName=GLUE_JOB_NAME
-            )
+        subsegment = xray_recorder.begin_subsegment("StartGlueJob")
+        subsegment.put_annotation("glue_job_name", GLUE_JOB_NAME)
+
+        response = glue_client.start_job_run(
+            JobName=GLUE_JOB_NAME
+        )
 
         job_run_id = response["JobRunId"]
+
+        subsegment.put_annotation("job_run_id", job_run_id)
+
+        xray_recorder.end_subsegment()
+        subsegment = None
 
         logger.info("Glue job started", extra={
             "job_name": GLUE_JOB_NAME,
@@ -59,9 +67,9 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error("Failed to start Glue job", exc_info=True)
 
-        xray_recorder.current_segment().add_annotation(
-            "glue_start_error", str(e)
-        )
+        if subsegment:
+            subsegment.put_annotation("glue_start_error", str(e))
+            xray_recorder.end_subsegment()
 
         send_to_dlq(event, str(e))
 

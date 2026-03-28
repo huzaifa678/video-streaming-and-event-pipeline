@@ -76,8 +76,13 @@ def lambda_handler(event, context):
                 "payload": data
             }
 
-            with xray_recorder.in_subsegment("ProcessingEnrichment"):
-                logger.info("Processed record", extra={"data": enriched})
+            subsegment = xray_recorder.begin_subsegment("ProcessingEnrichment")
+            subsegment.put_annotation("video_id", data.get("video_id", "unknown"))
+
+            logger.info("Processed record", extra={"data": enriched})
+
+            xray_recorder.end_subsegment()
+            subsegment = None
 
             if OPENSEARCH_ENDPOINT:
                 with xray_recorder.in_subsegment("OpenSearchIndex"):
@@ -87,7 +92,11 @@ def lambda_handler(event, context):
 
         except Exception as e:
             logger.error("Error processing record", exc_info=True)
-            xray_recorder.current_segment().add_annotation("processing_error", str(e))
+
+            if subsegment:
+                subsegment.put_annotation("processing_error", str(e))
+                xray_recorder.end_subsegment()
+                
             send_to_dlq(record, str(e))
 
     return {

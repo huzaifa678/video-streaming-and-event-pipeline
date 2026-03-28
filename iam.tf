@@ -208,6 +208,29 @@ resource "aws_iam_role" "rekognition_role" {
   })
 }
 
+resource "aws_iam_policy" "lambda_face_s3_policy" {
+  name = "${var.project_name}-lambda-face-s3"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion"
+        ]
+        Resource = "${aws_s3_bucket.face_images.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_face_s3_attach" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = aws_iam_policy.lambda_face_s3_policy.arn
+}
+
 resource "aws_iam_role_policy_attachment" "rekognition_full_access" {
   role       = aws_iam_role.rekognition_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonRekognitionFullAccess"

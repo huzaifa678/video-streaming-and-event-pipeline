@@ -17,21 +17,51 @@ DLQ_URL = os.environ.get("SQS_QUEUE_URL")
 secrets_client = boto3.client("secretsmanager")
 sqs_client = boto3.client("sqs")
 
+_engine = None  
+
+
 def get_redshift_credentials():
-    with xray_recorder.in_subsegment("GetSecrets"):
-        secret_value = secrets_client.get_secret_value(SecretId=REDSHIFT_SECRET_ARN)
+    subsegment = None
+
+    try:
+        subsegment = xray_recorder.begin_subsegment("GetSecrets")
+
+        secret_value = secrets_client.get_secret_value(
+            SecretId=REDSHIFT_SECRET_ARN
+        )
+
         secret = json.loads(secret_value["SecretString"])
+
+        subsegment.put_annotation("secret_fetched", True)
+
         return secret["username"], secret["password"]
 
+    finally:
+        if subsegment:
+            xray_recorder.end_subsegment()
+
+
 def get_engine():
+    global _engine
+
+    if _engine:
+        return _engine
+
     username, password = get_redshift_credentials()
-    return create_engine(
-        f"redshift+redshift_connector://{username}:{password}@{REDSHIFT_HOST}:5439/videoanalytics"
+
+    _engine = create_engine(
+        f"redshift+redshift_connector://{username}:{password}"
+        f"@{REDSHIFT_HOST}:5439/videoanalytics",
+        pool_pre_ping=True,
+        pool_recycle=300
     )
 
+    return _engine
+
+
 def send_to_dlq(event, error_msg):
-    if DLQ_URL:
-        try:
+    try:
+        if DLQ_URL:
             sqs_client.send_message(
                 QueueUrl=DLQ_URL,
                 MessageBody=json.dumps({
@@ -39,9 +69,9 @@ def send_to_dlq(event, error_msg):
                     "error": error_msg
                 })
             )
-        except Exception as e:
-            logger.error("Failed to send to DLQ", exc_info=True)
-            xray_recorder.current_subsegment().add_exception(e)
+    except Exception as e:
+        logger.error("Failed to send to DLQ", exc_info=True)
+
 
 def lambda_handler(event, context):
     logger.info("API request received", extra={"event": event})
@@ -55,6 +85,8 @@ def lambda_handler(event, context):
             "body": json.dumps({"error": "video_id required"})
         }
 
+    db_subsegment = None
+
     try:
         query = text("""
             SELECT metadata, timestamp
@@ -64,10 +96,16 @@ def lambda_handler(event, context):
             LIMIT 1
         """)
 
-        with xray_recorder.in_subsegment("RedshiftQuery"):
-            engine = get_engine()
-            with engine.connect() as conn:
-                result = conn.execute(query, {"video_id": video_id}).fetchone()
+        db_subsegment = xray_recorder.begin_subsegment("RedshiftQuery")
+        db_subsegment.put_annotation("video_id", video_id)
+
+        engine = get_engine()
+
+        with engine.connect() as conn:
+            result = conn.execute(query, {"video_id": video_id}).fetchone()
+
+        xray_recorder.end_subsegment()
+        db_subsegment = None
 
         if result:
             metadata_json = json.loads(result["metadata"])
@@ -91,9 +129,9 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error("Error querying Redshift", exc_info=True)
 
-        xray_recorder.current_segment().add_annotation(
-            "query_error", str(e)
-        )
+        if db_subsegment:
+            db_subsegment.put_annotation("query_error", str(e))
+            xray_recorder.end_subsegment()
 
         send_to_dlq(event, str(e))
 
