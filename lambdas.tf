@@ -128,6 +128,10 @@ resource "aws_lambda_function" "query_lambda" {
     }
   }
 
+  tracing_config {
+    mode = "Active"
+  }
+
   layers = [
     aws_lambda_layer_version.python_dependencies.arn
   ]
@@ -151,6 +155,10 @@ resource "aws_lambda_function" "start_glue" {
       GLUE_JOB_NAME = aws_glue_job.rekognition_to_redshift.name
       SQS_QUEUE_URL = aws_sqs_queue.video_events_dlq.id
     }
+  }
+
+  tracing_config {
+    mode = "Active"
   }
 
   layers = [aws_lambda_layer_version.python_dependencies.arn]
