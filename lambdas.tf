@@ -168,13 +168,14 @@ resource "aws_lambda_function" "start_glue" {
   }
 }
 
-resource "aws_lambda_permission" "allow_s3_rekognition_raw" {
-  statement_id  = "AllowExecutionFromS3RekognitionRaw"
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id  = "AllowExecutionFromEventBridge"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.start_glue.function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.rekognition_raw.arn
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.s3_rekognition_trigger.arn
 }
+
 
 resource "aws_lambda_function" "index_faces" {
   function_name = "${var.project_name}-index-faces"
