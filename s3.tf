@@ -56,6 +56,19 @@ resource "aws_s3_bucket_notification" "trigger_lambda" {
 
   depends_on = [
     aws_lambda_function.index_faces,
-    aws_lambda_permission.allow_s3
+    aws_lambda_permission.allow_s3_face_images
+  ]
+}
+
+resource "aws_s3_bucket_notification" "rekognition_s3_trigger" {
+  bucket = aws_s3_bucket.rekognition_raw.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.start_glue.arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [aws_lambda_permission.allow_s3_rekognition_raw,
+    aws_lambda_function.start_glue
   ]
 }

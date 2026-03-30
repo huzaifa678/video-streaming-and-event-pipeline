@@ -223,10 +223,18 @@ resource "aws_lambda_function" "index_faces" {
   }
 }
 
-resource "aws_lambda_permission" "allow_s3" {
+resource "aws_lambda_permission" "allow_s3_face_images" {
   statement_id  = "AllowExecutionFromS3"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.index_faces.function_name
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.face_images.arn
+}
+
+resource "aws_lambda_permission" "allow_s3_rekognition_raw" {
+  statement_id  = "AllowExecutionFromS3"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.start_glue.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.rekognition_raw.arn
 }
