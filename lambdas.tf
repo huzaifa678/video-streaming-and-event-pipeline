@@ -176,21 +176,6 @@ resource "aws_lambda_permission" "allow_s3_rekognition_raw" {
   source_arn    = aws_s3_bucket.rekognition_raw.arn
 }
 
-resource "aws_s3_bucket_notification" "rekognition_raw_trigger" {
-  bucket = aws_s3_bucket.rekognition_raw.id
-
-  lambda_function {
-    lambda_function_arn = aws_lambda_function.start_glue.arn
-    events              = ["s3:ObjectCreated:*"]
-
-    filter_prefix = "raw/rekognition/"
-  }
-
-  depends_on = [
-    aws_lambda_permission.allow_s3_rekognition_raw
-  ]
-}
-
 resource "aws_lambda_function" "index_faces" {
   function_name = "${var.project_name}-index-faces"
   filename      = data.archive_file.index_faces_zip.output_path
@@ -229,12 +214,4 @@ resource "aws_lambda_permission" "allow_s3_face_images" {
   function_name = aws_lambda_function.index_faces.function_name
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.face_images.arn
-}
-
-resource "aws_lambda_permission" "allow_s3_rekognition_raw" {
-  statement_id  = "AllowExecutionFromS3"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.start_glue.function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.rekognition_raw.arn
 }
