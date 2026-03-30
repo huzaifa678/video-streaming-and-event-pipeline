@@ -78,7 +78,7 @@ int main() {
     AVDictionary* opts = nullptr;
     av_dict_set(&opts, "preset", "ultrafast", 0);
     av_dict_set(&opts, "tune", "zerolatency", 0);
-    av_dict_set(&opts, "x264-params", "keyint=30:min-keyint=30:scenecut=0:repeat-headers=1:annexb=1:bitrate=2000:vbv-maxrate=2000:vbv-bufsize=4000:nal-hrd=cbr", 0);
+    av_dict_set(&opts, "x264-params", "keyint=30:min-keyint=30:scenecut=0:repeat-headers=1:annexb=0:bitrate=2000:vbv-maxrate=2000:vbv-bufsize=4000:nal-hrd=cbr", 0);
 
     if (avcodec_open2(ctx, codec, &opts) < 0) {
         ERR("Could not open codec");
@@ -116,13 +116,16 @@ int main() {
                         av_packet_unref(pkt);
                         continue;
                     }
+
+                    LOG("Extradata size: " << ctx->extradata_size);
                     
                     auto def = make_unique<StreamDefinition>(
                         "video-analytics-video-stream", chrono::hours(24), nullptr, "", 
                         STREAMING_TYPE_REALTIME, "video/h264",
                         chrono::milliseconds::zero(), chrono::milliseconds(2000), chrono::milliseconds(1),
                         true, true, true, true, true, true, true,
-                        (NAL_ADAPTATION_ANNEXB_NALS | NAL_ADAPTATION_ANNEXB_CPD_NALS),
+                        //(NAL_ADAPTATION_ANNEXB_NALS | NAL_ADAPTATION_ANNEXB_CPD_NALS),
+                        NAL_ADAPTATION_FLAG_NONE,
                         fps, 4*1024*1024, chrono::seconds(120), chrono::seconds(40), chrono::seconds(30),
                         "V_MPEG4/ISO/AVC", "Video Track", ctx->extradata, (uint32_t)ctx->extradata_size
                     );
@@ -133,7 +136,10 @@ int main() {
 
                 Frame kvsFrame{};
                 kvsFrame.index = frameCounter; 
-                uint64_t ts = startTime + (frameCounter * (10000000 / fps));
+                //uint64_t ts = startTime + (frameCounter * (10000000 / fps));
+                auto ts = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()
+                ).count() / 100;
 
                 kvsFrame.flags = (pkt->flags & AV_PKT_FLAG_KEY) ? FRAME_FLAG_KEY_FRAME : FRAME_FLAG_NONE;
                 kvsFrame.presentationTs = ts;
