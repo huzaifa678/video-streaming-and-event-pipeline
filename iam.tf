@@ -379,6 +379,7 @@ resource "aws_iam_role_policy" "rekognition_kinesis_access" {
         Action = [
           "kinesisvideo:GetDataEndpoint",
           "kinesisvideo:GetMedia",
+          "kinesisvideo:GetMediaForFragmentList",
           "kinesisvideo:DescribeStream"
         ]
         Resource = aws_kinesis_video_stream.video_stream.arn
