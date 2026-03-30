@@ -231,11 +231,6 @@ resource "aws_iam_role_policy_attachment" "lambda_face_s3_attach" {
   policy_arn = aws_iam_policy.lambda_face_s3_policy.arn
 }
 
-resource "aws_iam_role_policy_attachment" "rekognition_full_access" {
-  role       = aws_iam_role.rekognition_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonRekognitionFullAccess"
-}
-
 resource "aws_iam_role" "firehose_role" {
   name = "${var.project_name}-firehose-role"
 
