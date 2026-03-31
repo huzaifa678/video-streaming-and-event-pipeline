@@ -22,3 +22,13 @@ variable "lambda_timeout" {
   type    = number
   default = 10
 }
+
+variable "bucket_name_remote" {
+  type = string
+  default = "video-ml-pipeline-terraform-state-ec371a2a"
+}
+
+variable "bucket_key_name" {
+  type = string
+  default = "video-pipeline-arch/terraform.tfstate"
+}
