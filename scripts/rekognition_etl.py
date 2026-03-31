@@ -16,6 +16,7 @@ patch_all()
 logger = logging.getLogger("GlueETL")
 logger.setLevel(logging.INFO)
 
+# Fetching Job Arguments
 args = getResolvedOptions(sys.argv, [
     'JOB_NAME',
     'S3_INPUT_PATH',
@@ -35,6 +36,13 @@ job.init(args['JOB_NAME'], args)
 secrets_client = boto3.client("secretsmanager")
 sqs_client = boto3.client("sqs")
 
+# must manually start a segment for the Python SDK to track subsegments
+xray_recorder.begin_segment(args['JOB_NAME'])
+
+def safe_annotate(segment, key, value):
+    """Helper to prevent AttributeError if segment is None"""
+    if segment:
+        segment.put_annotation(key, value)
 
 def send_to_dlq(stage, error_msg, context_data=None):
     try:
@@ -50,53 +58,46 @@ def send_to_dlq(stage, error_msg, context_data=None):
     except Exception as e:
         logger.error("Failed to send to DLQ", exc_info=True)
 
-
 def get_secret():
     subsegment = None
     try:
         subsegment = xray_recorder.begin_subsegment("GetRedshiftSecret")
-
+        
         secret_value = secrets_client.get_secret_value(
             SecretId=args['REDSHIFT_SECRET_ARN']
         )
-
         secret = json.loads(secret_value["SecretString"])
 
-        subsegment.put_annotation("secret_fetched", True)
-
+        safe_annotate(subsegment, "secret_fetched", True)
         return secret["username"], secret["password"]
 
     except Exception as e:
-        if subsegment:
-            subsegment.put_annotation("secret_error", str(e))
+        safe_annotate(subsegment, "secret_error", str(e))
         raise
-
     finally:
         if subsegment:
             xray_recorder.end_subsegment()
 
-
+# --- S3 READ STAGE ---
+s3_seg = None
 try:
     s3_seg = xray_recorder.begin_subsegment("S3Read")
-
     df = spark.read.json(args['S3_INPUT_PATH'])
-
     input_count = df.count()
 
-    s3_seg.put_annotation("input_count", input_count)
-    xray_recorder.end_subsegment()
-
+    safe_annotate(s3_seg, "input_count", input_count)
     logger.info(f"Loaded input records: {input_count}")
 
 except Exception as e:
-    if s3_seg:
-        s3_seg.put_annotation("s3_read_error", str(e))
-        xray_recorder.end_subsegment()
-
+    safe_annotate(s3_seg, "s3_read_error", str(e))
     send_to_dlq("S3_READ", str(e), {"path": args['S3_INPUT_PATH']})
     raise
+finally:
+    if s3_seg:
+        xray_recorder.end_subsegment()
 
-
+# --- TRANSFORM STAGE ---
+transform_seg = None
 try:
     transform_seg = xray_recorder.begin_subsegment("Transform")
 
@@ -113,21 +114,19 @@ try:
         col("face_match.MatchedFaces")[0]["Similarity"].alias("similarity")
     ).dropna()
 
-    transform_seg.put_annotation("status", "success")
-
-    xray_recorder.end_subsegment()
-
+    safe_annotate(transform_seg, "status", "success")
     logger.info("Transformation completed")
 
 except Exception as e:
-    if transform_seg:
-        transform_seg.put_annotation("transform_error", str(e))
-        xray_recorder.end_subsegment()
-
+    safe_annotate(transform_seg, "transform_error", str(e))
     send_to_dlq("TRANSFORM", str(e))
     raise
+finally:
+    if transform_seg:
+        xray_recorder.end_subsegment()
 
-
+# --- REDSHIFT WRITE STAGE ---
+write_seg = None
 try:
     write_seg = xray_recorder.begin_subsegment("RedshiftWrite")
 
@@ -143,19 +142,16 @@ try:
         .mode("append") \
         .save()
 
-    write_seg.put_annotation("status", "success")
-
-    xray_recorder.end_subsegment()
-
+    safe_annotate(write_seg, "status", "success")
     logger.info("Successfully wrote to Redshift")
 
 except Exception as e:
-    if write_seg:
-        write_seg.put_annotation("write_error", str(e))
-        xray_recorder.end_subsegment()
-
+    safe_annotate(write_seg, "write_error", str(e))
     send_to_dlq("REDSHIFT_WRITE", str(e))
     raise
-
+finally:
+    if write_seg:
+        xray_recorder.end_subsegment()
 
 job.commit()
+xray_recorder.end_segment() # Closing the main job segment
