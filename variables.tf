@@ -9,8 +9,8 @@ variable "project_name" {
 }
 
 variable "env" {
-    type = string
-    default = "dev"
+  type = string
+  default = "dev"
 }
 
 variable "lambda_memory" {
