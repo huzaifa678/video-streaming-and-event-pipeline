@@ -391,3 +391,21 @@ resource "aws_iam_role_policy" "rekognition_kinesis_access" {
     ]
   })
 }
+
+resource "aws_iam_role_policy" "lambda_glue_start" {
+  name = "lambda-glue-start-job"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "glue:StartJobRun"
+        ]
+        Resource = "arn:aws:glue:us-east-1:533267178572:job/video-analytics-rekognition-etl"
+      }
+    ]
+  })
+}
