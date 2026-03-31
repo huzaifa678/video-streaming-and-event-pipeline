@@ -8,9 +8,9 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = var.bucket_name_remote
-    key            = var.bucket_key_name
-    region         = var.aws_region
+    bucket         = "video-ml-pipeline-terraform-state-ec371a2a"
+    key            = "video-pipeline-arch/terraform.tfstate"
+    region         = "us-east-1"
     use_lockfile = true
     encrypt        = true
   }
