@@ -18,6 +18,6 @@ resource "aws_glue_job" "rekognition_to_redshift" {
       "--SQS_QUEUE_URL"       = aws_sqs_queue.video_events_dlq.url
     }
 
-  max_retries = 1
+  max_retries = 4
   timeout     = 10
 }

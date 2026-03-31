@@ -416,7 +416,7 @@ resource "aws_iam_role_policy" "lambda_glue_start" {
         Action = [
           "glue:StartJobRun"
         ]
-        Resource = "arn:aws:glue:us-east-1:533267178572:job/video-analytics-rekognition-etl"
+        Resource = aws_glue_job.rekognition_to_redshift.arn
       }
     ]
   })
