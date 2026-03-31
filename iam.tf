@@ -323,7 +323,7 @@ resource "aws_iam_policy" "glue_policy" {
       {
         Effect = "Allow",
         Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
-        Resource = [aws_s3_bucket.analysis_results.arn, "${aws_s3_bucket.analysis_results.arn}/*"]
+        Resource = [aws_s3_bucket.analysis_results.arn, "${aws_s3_bucket.analysis_results.arn}/*", aws_s3_bucket.rekognition_raw.arn,"${aws_s3_bucket.rekognition_raw.arn}/*"]
       },
       {
         Effect = "Allow",
@@ -352,6 +352,18 @@ resource "aws_iam_policy" "glue_policy" {
         Effect = "Allow",
         Action = ["sqs:SendMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl"],
         Resource = aws_sqs_queue.video_events_dlq.arn
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeVpcs"
+        ],
+        Resource = "*"
       }
     ]
   })
