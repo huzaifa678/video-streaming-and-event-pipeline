@@ -24,5 +24,5 @@ resource "aws_glue_job" "rekognition_to_redshift" {
     }
 
   max_retries = 4
-  timeout     = 10
+  timeout     = 120
 }
