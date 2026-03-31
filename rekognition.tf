@@ -12,6 +12,10 @@ resource "aws_rekognition_stream_processor" "video_processor" {
   name     = "${var.project_name}-video-processor"
   role_arn = aws_iam_role.rekognition_role.arn
 
+  depends_on = [
+    aws_iam_role_policy.rekognition_kinesis_access
+  ]
+
   input {
     kinesis_video_stream {
       arn = aws_kinesis_video_stream.video_stream.arn   
@@ -36,7 +40,7 @@ resource "aws_rekognition_stream_processor" "video_processor" {
   }
 
   provisioner "local-exec" {
-    command = "aws rekognition start-stream-processor --name ${self.name} --region ${var.aws_region}"
+    command = "sleep 20 && aws rekognition start-stream-processor --name ${self.name} --region ${var.aws_region}"
   }
 
   lifecycle {
