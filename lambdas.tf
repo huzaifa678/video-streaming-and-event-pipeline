@@ -28,6 +28,12 @@ data "archive_file" "index_faces_zip" {
   output_path = "${path.module}/builds/index_faces.zip"
 }
 
+data "archive_file" "firehose_transform_zip" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/firehose_transform.py"
+  output_path = "${path.module}/builds/firehose_transform.zip"
+}
+
 data "archive_file" "python_lib_zip" {
   type        = "zip"
   source_dir = "${path.module}/python_layer"
@@ -215,4 +221,18 @@ resource "aws_lambda_permission" "allow_s3_face_images" {
   function_name = aws_lambda_function.index_faces.function_name
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.face_images.arn
+}
+
+resource "aws_lambda_function" "firehose_transform" {
+  function_name = "${var.project_name}-firehose-transform"
+  role          = aws_iam_role.lambda_role.arn
+
+  runtime = "python3.11"
+  handler = "firehose_transform.lambda_handler"
+
+  filename      = data.archive_file.firehose_transform_zip.output_path
+  source_code_hash = filebase64sha256(data.archive_file.firehose_transform_zip.output_path)
+
+  timeout = 10
+  memory_size = 128
 }

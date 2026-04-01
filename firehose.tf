@@ -34,5 +34,18 @@ resource "aws_kinesis_firehose_delivery_stream" "rekognition_to_s3" {
     buffering_interval = 60
     error_output_prefix = "errors/!{firehose:error-output-type}/"
     prefix = "raw/rekognition/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
+    
+    processing_configuration {
+      enabled = "true"
+
+      processors {
+        type = "Lambda"
+
+        parameters {
+          parameter_name  = "LambdaArn"
+          parameter_value = aws_lambda_function.firehose_transform.arn
+        }
+      }
+    }
   }
 }

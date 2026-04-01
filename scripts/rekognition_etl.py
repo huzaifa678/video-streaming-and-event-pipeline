@@ -16,7 +16,7 @@ patch_all()
 logger = logging.getLogger("GlueETL")
 logger.setLevel(logging.INFO)
 
-# Fetching Job Arguments
+# Job Arguments
 args = getResolvedOptions(sys.argv, [
     'JOB_NAME',
     'S3_INPUT_PATH',
@@ -84,20 +84,13 @@ load_seg = None
 try:
     load_seg = xray_recorder.begin_subsegment("LoadData")
 
-    raw_df = spark.read.text(args['S3_INPUT_PATH'])
+    df = spark.read.json(args['S3_INPUT_PATH'])
 
-    logger.info("Loaded raw text data from S3")
-    json_rdd = raw_df.rdd.flatMap(lambda row: row.value.split("}{"))
-
-    json_rdd = json_rdd.map(lambda x: x if x.startswith("{") else "{" + x)
-    json_rdd = json_rdd.map(lambda x: x if x.endswith("}") else x + "}")
-
-    df = spark.read.json(json_rdd)
-
-    logger.info("Converted concatenated JSON into structured DataFrame")
+    logger.info(f"Loaded data from {args['S3_INPUT_PATH']}")
     logger.info(f"Raw record count: {df.count()}")
 
     safe_annotate(load_seg, "load_status", "success")
+
 except Exception as e:
     safe_annotate(load_seg, "load_error", str(e))
     send_to_dlq("LOAD", str(e))

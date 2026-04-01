@@ -421,3 +421,22 @@ resource "aws_iam_role_policy" "lambda_glue_start" {
     ]
   })
 }
+
+resource "aws_iam_role_policy" "firehose_lambda_access" {
+  name = "firehose-lambda-access"
+  role = aws_iam_role.firehose_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "lambda:InvokeFunction",
+          "lambda:GetFunctionConfiguration"
+        ],
+        Resource = aws_lambda_function.firehose_transform.arn
+      }
+    ]
+  })
+}
