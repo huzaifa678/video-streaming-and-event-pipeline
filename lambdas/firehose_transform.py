@@ -1,13 +1,32 @@
 import base64
 import json
 import logging
+import os
 
 from aws_xray_sdk.core import xray_recorder, patch_all
+
+from python_layer.python import boto3
 
 patch_all()
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+sqs_client = boto3.client("sqs")
+DLQ_URL = os.environ.get("SQS_QUEUE_URL")
+
+def send_to_dlq(record, error_msg):
+    if DLQ_URL:
+        try:
+            sqs_client.send_message(
+                QueueUrl=DLQ_URL,
+                MessageBody=json.dumps({
+                    "record": record,
+                    "error": error_msg
+                })
+            )
+        except Exception as e:
+            logger.error("Failed to send to DLQ", exc_info=True)
 
 
 def lambda_handler(event, context):
@@ -57,6 +76,8 @@ def lambda_handler(event, context):
                 'result': 'Dropped',
                 'data': record['data']
             }
+
+            send_to_dlq(record, str(e))
 
         finally:
             if subsegment:
