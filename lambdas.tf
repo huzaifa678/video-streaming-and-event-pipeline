@@ -225,7 +225,7 @@ resource "aws_lambda_permission" "allow_s3_face_images" {
 
 resource "aws_lambda_function" "firehose_transform" {
   function_name = "${var.project_name}-firehose-transform"
-  role          = aws_iam_role.lambda_role.arn
+  role          = aws_iam_role.lambda_exec.arn
 
   runtime = "python3.11"
   handler = "firehose_transform.lambda_handler"
