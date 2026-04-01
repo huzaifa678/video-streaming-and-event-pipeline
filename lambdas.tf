@@ -236,3 +236,11 @@ resource "aws_lambda_function" "firehose_transform" {
   timeout = 10
   memory_size = 128
 }
+
+resource "aws_lambda_permission" "allow_firehose_invoke" {
+  statement_id  = "AllowExecutionFromFirehose"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.firehose_transform.function_name
+  principal     = "firehose.amazonaws.com"
+  source_arn    = aws_kinesis_firehose_delivery_stream.rekognition_to_s3.arn
+}
