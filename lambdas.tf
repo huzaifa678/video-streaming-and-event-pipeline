@@ -235,6 +235,18 @@ resource "aws_lambda_function" "firehose_transform" {
 
   timeout = 10
   memory_size = 128
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.video_events_dlq.arn
+  }
+
+  layers = [
+    aws_lambda_layer_version.python_dependencies.arn
+  ]
 }
 
 resource "aws_lambda_permission" "allow_firehose_invoke" {
