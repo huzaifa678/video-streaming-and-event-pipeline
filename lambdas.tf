@@ -236,6 +236,12 @@ resource "aws_lambda_function" "firehose_transform" {
   timeout = 10
   memory_size = 128
 
+  environment {
+    variables = {
+      SQS_QUEUE_URL = aws_sqs_queue.video_events_dlq.id
+    }
+  }
+
   tracing_config {
     mode = "Active"
   }
