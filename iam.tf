@@ -350,11 +350,6 @@ resource "aws_iam_policy" "glue_policy" {
       },
       {
         Effect = "Allow",
-        Action = ["sqs:SendMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl"],
-        Resource = aws_sqs_queue.video_events_dlq.arn
-      },
-      {
-        Effect = "Allow",
         Action = [
           "ec2:CreateNetworkInterface",
           "ec2:DescribeNetworkInterfaces",
@@ -399,24 +394,6 @@ resource "aws_iam_role_policy" "rekognition_kinesis_access" {
           "kinesis:PutRecords"
         ]
         Resource = aws_kinesis_stream.rekognition_output.arn
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "lambda_glue_start" {
-  name = "lambda-glue-start-job"
-  role = aws_iam_role.lambda_exec.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "glue:StartJobRun"
-        ]
-        Resource = aws_glue_job.rekognition_to_redshift.arn
       }
     ]
   })

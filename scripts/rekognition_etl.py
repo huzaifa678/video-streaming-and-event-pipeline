@@ -16,16 +16,12 @@ patch_all()
 logger = logging.getLogger("GlueETL")
 logger.setLevel(logging.INFO)
 
-# Job Arguments
 args = getResolvedOptions(sys.argv, [
     'JOB_NAME',
     'S3_INPUT_PATH',
     'REDSHIFT_JDBC_URL',
-    'REDSHIFT_SECRET_ARN',
-    'SQS_QUEUE_URL'
+    'REDSHIFT_SECRET_ARN'
 ])
-
-SQS_QUEUE_URL = args['SQS_QUEUE_URL']
 
 sc = SparkContext.getOrCreate()
 glueContext = GlueContext(sc)
@@ -34,7 +30,6 @@ job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
 secrets_client = boto3.client("secretsmanager")
-sqs_client = boto3.client("sqs")
 
 xray_recorder.begin_segment(args['JOB_NAME'])
 
@@ -42,21 +37,6 @@ xray_recorder.begin_segment(args['JOB_NAME'])
 def safe_annotate(segment, key, value):
     if segment:
         segment.put_annotation(key, value)
-
-
-def send_to_dlq(stage, error_msg, context_data=None):
-    try:
-        sqs_client.send_message(
-            QueueUrl=SQS_QUEUE_URL,
-            MessageBody=json.dumps({
-                "job": args['JOB_NAME'],
-                "stage": stage,
-                "error": error_msg,
-                "context": context_data
-            })
-        )
-    except Exception:
-        logger.error("Failed to send to DLQ", exc_info=True)
 
 
 def get_secret():
@@ -93,7 +73,6 @@ try:
 
 except Exception as e:
     safe_annotate(load_seg, "load_error", str(e))
-    send_to_dlq("LOAD", str(e))
     raise
 finally:
     if load_seg:
@@ -129,7 +108,6 @@ try:
 
 except Exception as e:
     safe_annotate(transform_seg, "transform_error", str(e))
-    send_to_dlq("TRANSFORM", str(e))
     raise
 finally:
     if transform_seg:
@@ -157,7 +135,6 @@ try:
 
 except Exception as e:
     safe_annotate(load_rs_seg, "load_rs_error", str(e))
-    send_to_dlq("LOAD_REDSHIFT", str(e))
     raise
 finally:
     if load_rs_seg:

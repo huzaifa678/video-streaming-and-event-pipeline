@@ -16,12 +16,6 @@ data "archive_file" "query_zip" {
   output_path = "${path.module}/builds/query.zip"
 }
 
-data "archive_file" "start_glue_zip" {
-  type        = "zip"
-  source_file = "${path.module}/lambdas/start_glue.py"
-  output_path = "${path.module}/builds/start_glue.zip"
-}
-
 data "archive_file" "index_faces_zip" {
   type        = "zip"
   source_file = "${path.module}/lambdas/index_faces.py"
@@ -146,42 +140,6 @@ resource "aws_lambda_function" "query_lambda" {
     target_arn = aws_sqs_queue.video_events_dlq.arn
   }
 }
-
-resource "aws_lambda_function" "start_glue" {
-  function_name = "${var.project_name}-start-glue"
-  filename      = data.archive_file.start_glue_zip.output_path
-  handler       = "start_glue.lambda_handler"
-  runtime       = "python3.11"
-  role          = aws_iam_role.lambda_exec.arn
-  timeout       = 30
-  memory_size   = 256
-
-  environment {
-    variables = {
-      GLUE_JOB_NAME = aws_glue_job.rekognition_to_redshift.name
-      SQS_QUEUE_URL = aws_sqs_queue.video_events_dlq.id
-    }
-  }
-
-  tracing_config {
-    mode = "Active"
-  }
-
-  layers = [aws_lambda_layer_version.python_dependencies.arn]
-
-  dead_letter_config {
-    target_arn = aws_sqs_queue.video_events_dlq.arn
-  }
-}
-
-resource "aws_lambda_permission" "allow_eventbridge" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.start_glue.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.s3_rekognition_trigger.arn
-}
-
 
 resource "aws_lambda_function" "index_faces" {
   function_name = "${var.project_name}-index-faces"

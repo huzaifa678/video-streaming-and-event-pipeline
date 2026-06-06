@@ -20,7 +20,6 @@ resource "aws_glue_job" "rekognition_to_redshift" {
       "--S3_INPUT_PATH"       = "s3://${aws_s3_bucket.rekognition_raw.bucket}/raw/rekognition/"
       "--REDSHIFT_JDBC_URL"   = "jdbc:redshift://${aws_redshift_cluster.main.endpoint}:5439/videoanalytics"
       "--REDSHIFT_SECRET_ARN" = aws_secretsmanager_secret.redshift.arn
-      "--SQS_QUEUE_URL"       = aws_sqs_queue.video_events_dlq.url
     }
 
   max_retries = 4

@@ -44,9 +44,9 @@ output "lambda_processing_name" {
   value       = aws_lambda_function.processing.function_name
 }
 
-output "lambda_glue_start_name" {
-  description = "Glue Start Lambda name"
-  value       = aws_lambda_function.start_glue.function_name
+output "glue_orchestrator_state_machine_arn" {
+  description = "Step Function orchestrating the Glue ETL with DLQ"
+  value       = aws_sfn_state_machine.glue_orchestrator.arn
 }
 
 output "lambda_query_name" {
