@@ -1,76 +1,56 @@
 output "api_gateway_endpoint" {
   description = "HTTP endpoint of the API Gateway"
-  value       = aws_apigatewayv2_stage.stage.invoke_url
+  value       = module.api.invoke_url
 }
 
 output "kinesis_video_stream_name" {
-  description = "Name of the Kinesis Video Stream"
-  value       = aws_kinesis_video_stream.video_stream.name
+  value = module.messaging.kvs_name
 }
 
 output "kinesis_video_stream_arn" {
-  description = "ARN of the Kinesis Video Stream"
-  value       = aws_kinesis_video_stream.video_stream.arn
+  value = module.messaging.kvs_arn
 }
 
 output "kinesis_data_stream_name" {
-  description = "Name of the Kinesis Data Stream"
-  value       = aws_kinesis_stream.video_events.name
+  value = module.messaging.kinesis_stream_name
 }
 
 output "kinesis_data_stream_arn" {
-  description = "ARN of the Kinesis Data Stream"
-  value       = aws_kinesis_stream.video_events.arn
+  value = module.messaging.kinesis_stream_arn
 }
 
 output "sqs_queue_url" {
-  description = "URL of the main SQS queue"
-  value       = aws_sqs_queue.video_events.id
+  value = module.messaging.sqs_main_url
 }
 
 output "sqs_dlq_url" {
-  description = "URL of the Dead Letter Queue"
-  value       = aws_sqs_queue.video_events_dlq.id
+  value = module.messaging.sqs_dlq_id
 }
 
-# Lambda Functions
 output "lambda_ingestion_name" {
-  description = "Ingestion Lambda name"
-  value       = aws_lambda_function.ingestion.function_name
+  value = module.compute.ingestion_function_name
 }
 
 output "lambda_processing_name" {
-  description = "Processing Lambda name"
-  value       = aws_lambda_function.processing.function_name
-}
-
-output "glue_orchestrator_state_machine_arn" {
-  description = "Step Function orchestrating the Glue ETL with DLQ"
-  value       = aws_sfn_state_machine.glue_orchestrator.arn
+  value = module.compute.processing_function_name
 }
 
 output "lambda_query_name" {
-  description = "Query Lambda name"
-  value       = aws_lambda_function.query_lambda.function_name
+  value = module.compute.query_function_name
 }
 
-# Redshift
 output "redshift_endpoint" {
-  description = "Redshift cluster endpoint"
-  value       = aws_redshift_cluster.main.endpoint
+  value = module.analytics.redshift_endpoint
 }
 
 output "redshift_db_name" {
-  description = "Redshift database name"
-  value       = aws_redshift_cluster.main.database_name
+  value = module.analytics.redshift_database_name
 }
 
 output "opensearch_endpoint" {
-  description = "OpenSearch domain endpoint"
-  value       = aws_opensearch_domain.video_events.endpoint
+  value = module.analytics.opensearch_endpoint
 }
 
-output "firehose_s3_bucket" {
-  description = "S3 bucket used by Firehose for storing events"
-  value       = aws_s3_bucket.analysis_results.bucket
+output "glue_orchestrator_state_machine_arn" {
+  value = module.etl.state_machine_arn
 }

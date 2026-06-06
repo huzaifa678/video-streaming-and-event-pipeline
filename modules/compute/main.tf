@@ -1,37 +1,37 @@
 data "archive_file" "ingest_zip" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/ingestion.py"
-  output_path = "${path.module}/builds/ingest.zip"
+  source_file = "${var.source_root}/lambdas/ingestion.py"
+  output_path = "${var.source_root}/builds/ingest.zip"
 }
 
 data "archive_file" "processing_zip" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/processing.py"
-  output_path = "${path.module}/builds/processing.zip"
+  source_file = "${var.source_root}/lambdas/processing.py"
+  output_path = "${var.source_root}/builds/processing.zip"
 }
 
 data "archive_file" "query_zip" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/query.py"
-  output_path = "${path.module}/builds/query.zip"
+  source_file = "${var.source_root}/lambdas/query.py"
+  output_path = "${var.source_root}/builds/query.zip"
 }
 
 data "archive_file" "index_faces_zip" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/index_faces.py"
-  output_path = "${path.module}/builds/index_faces.zip"
+  source_file = "${var.source_root}/lambdas/index_faces.py"
+  output_path = "${var.source_root}/builds/index_faces.zip"
 }
 
 data "archive_file" "firehose_transform_zip" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/firehose_transform.py"
-  output_path = "${path.module}/builds/firehose_transform.zip"
+  source_file = "${var.source_root}/lambdas/firehose_transform.py"
+  output_path = "${var.source_root}/builds/firehose_transform.zip"
 }
 
 data "archive_file" "python_lib_zip" {
   type        = "zip"
-  source_dir = "${path.module}/python_layer"
-  output_path = "${path.module}/builds/python_lib.zip"
+  source_dir  = "${var.source_root}/python_layer"
+  output_path = "${var.source_root}/builds/python_lib.zip"
 }
 
 resource "aws_lambda_layer_version" "python_dependencies" {
@@ -39,6 +39,10 @@ resource "aws_lambda_layer_version" "python_dependencies" {
   filename            = data.archive_file.python_lib_zip.output_path
   compatible_runtimes = ["python3.11"]
   description         = "Python dependencies for Lambdas"
+}
+
+resource "aws_rekognition_collection" "faces" {
+  collection_id = "my-face-collection"
 }
 
 resource "aws_lambda_function" "ingestion" {
@@ -54,19 +58,17 @@ resource "aws_lambda_function" "ingestion" {
 
   environment {
     variables = {
-        REDSHIFT_SECRET_ARN = aws_secretsmanager_secret.redshift.arn
-        KINESIS_STREAM      = aws_kinesis_stream.video_events.name
-        SQS_QUEUE_URL       = aws_sqs_queue.video_events.id
+      REDSHIFT_SECRET_ARN = var.redshift_secret_arn
+      KINESIS_STREAM      = var.kinesis_stream_name
+      SQS_QUEUE_URL       = var.sqs_main_url
     }
   }
 
   tracing_config {
-    mode = "Active" # Enables X-Ray
+    mode = "Active"
   }
 
-  layers = [
-    aws_lambda_layer_version.python_dependencies.arn
-  ]
+  layers = [aws_lambda_layer_version.python_dependencies.arn]
 }
 
 resource "aws_lambda_function" "processing" {
@@ -82,11 +84,11 @@ resource "aws_lambda_function" "processing" {
 
   environment {
     variables = {
-        REDSHIFT_SECRET_ARN = aws_secretsmanager_secret.redshift.arn
-        REDSHIFT_HOST       = aws_redshift_cluster.main.endpoint
-        OPENSEARCH_ENDPOINT = aws_opensearch_domain.video_events.endpoint 
-        KINESIS_STREAM      = aws_kinesis_stream.video_events.name
-        SQS_QUEUE_URL       = aws_sqs_queue.video_events_dlq.id
+      REDSHIFT_SECRET_ARN = var.redshift_secret_arn
+      REDSHIFT_HOST       = var.redshift_endpoint
+      OPENSEARCH_ENDPOINT = var.opensearch_endpoint
+      KINESIS_STREAM      = var.kinesis_stream_name
+      SQS_QUEUE_URL       = var.sqs_dlq_url
     }
   }
 
@@ -94,17 +96,15 @@ resource "aws_lambda_function" "processing" {
     mode = "Active"
   }
 
-  layers = [
-    aws_lambda_layer_version.python_dependencies.arn
-  ]
+  layers = [aws_lambda_layer_version.python_dependencies.arn]
 
   dead_letter_config {
-    target_arn = aws_sqs_queue.video_events_dlq.arn
+    target_arn = var.sqs_dlq_arn
   }
 }
 
 resource "aws_lambda_event_source_mapping" "processing_kinesis_trigger" {
-  event_source_arn  = aws_kinesis_stream.video_events.arn
+  event_source_arn  = var.kinesis_stream_arn
   function_name     = aws_lambda_function.processing.arn
   starting_position = "LATEST"
   batch_size        = 100
@@ -121,10 +121,10 @@ resource "aws_lambda_function" "query_lambda" {
 
   environment {
     variables = {
-        REDSHIFT_SECRET_ARN = aws_secretsmanager_secret.redshift.arn
-        REDSHIFT_HOST       = aws_redshift_cluster.main.endpoint
-        OPENSEARCH_ENDPOINT = aws_opensearch_domain.video_events.endpoint 
-        SQS_QUEUE_URL       = aws_sqs_queue.video_events_dlq.id
+      REDSHIFT_SECRET_ARN = var.redshift_secret_arn
+      REDSHIFT_HOST       = var.redshift_endpoint
+      OPENSEARCH_ENDPOINT = var.opensearch_endpoint
+      SQS_QUEUE_URL       = var.sqs_dlq_url
     }
   }
 
@@ -132,12 +132,10 @@ resource "aws_lambda_function" "query_lambda" {
     mode = "Active"
   }
 
-  layers = [
-    aws_lambda_layer_version.python_dependencies.arn
-  ]
+  layers = [aws_lambda_layer_version.python_dependencies.arn]
 
   dead_letter_config {
-    target_arn = aws_sqs_queue.video_events_dlq.arn
+    target_arn = var.sqs_dlq_arn
   }
 }
 
@@ -155,21 +153,18 @@ resource "aws_lambda_function" "index_faces" {
   environment {
     variables = {
       COLLECTION_ID = aws_rekognition_collection.faces.id
-      SQS_QUEUE_URL = aws_sqs_queue.video_events_dlq.id
+      SQS_QUEUE_URL = var.sqs_dlq_url
     }
   }
 
-  layers = [
-    aws_lambda_layer_version.python_dependencies.arn
-  ]
+  layers = [aws_lambda_layer_version.python_dependencies.arn]
 
   tracing_config {
     mode = "Active"
   }
 
-
   dead_letter_config {
-    target_arn = aws_sqs_queue.video_events_dlq.arn
+    target_arn = var.sqs_dlq_arn
   }
 }
 
@@ -178,7 +173,21 @@ resource "aws_lambda_permission" "allow_s3_face_images" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.index_faces.function_name
   principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.face_images.arn
+  source_arn    = var.face_images_bucket_arn
+}
+
+resource "aws_s3_bucket_notification" "trigger_lambda" {
+  bucket = var.face_images_bucket_id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.index_faces.arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [
+    aws_lambda_function.index_faces,
+    aws_lambda_permission.allow_s3_face_images
+  ]
 }
 
 resource "aws_lambda_function" "firehose_transform" {
@@ -188,15 +197,15 @@ resource "aws_lambda_function" "firehose_transform" {
   runtime = "python3.11"
   handler = "firehose_transform.lambda_handler"
 
-  filename      = data.archive_file.firehose_transform_zip.output_path
+  filename         = data.archive_file.firehose_transform_zip.output_path
   source_code_hash = filebase64sha256(data.archive_file.firehose_transform_zip.output_path)
 
-  timeout = 10
+  timeout     = 10
   memory_size = 128
 
   environment {
     variables = {
-      SQS_QUEUE_URL = aws_sqs_queue.video_events_dlq.id
+      SQS_QUEUE_URL = var.sqs_dlq_url
     }
   }
 
@@ -205,18 +214,8 @@ resource "aws_lambda_function" "firehose_transform" {
   }
 
   dead_letter_config {
-    target_arn = aws_sqs_queue.video_events_dlq.arn
+    target_arn = var.sqs_dlq_arn
   }
 
-  layers = [
-    aws_lambda_layer_version.python_dependencies.arn
-  ]
-}
-
-resource "aws_lambda_permission" "allow_firehose_invoke" {
-  statement_id  = "AllowExecutionFromFirehose"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.firehose_transform.function_name
-  principal     = "firehose.amazonaws.com"
-  source_arn    = aws_kinesis_firehose_delivery_stream.rekognition_to_s3.arn
+  layers = [aws_lambda_layer_version.python_dependencies.arn]
 }

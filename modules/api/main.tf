@@ -9,7 +9,7 @@ resource "aws_apigatewayv2_stage" "stage" {
   auto_deploy = true
 
   default_route_settings {
-    throttling_burst_limit = var.env == "dev" ? 50  : 500
+    throttling_burst_limit = var.env == "dev" ? 50 : 500
     throttling_rate_limit  = var.env == "dev" ? 100 : 1000
   }
 }
@@ -17,7 +17,7 @@ resource "aws_apigatewayv2_stage" "stage" {
 resource "aws_apigatewayv2_integration" "lambda_ingest" {
   api_id           = aws_apigatewayv2_api.video_api.id
   integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.ingestion.invoke_arn
+  integration_uri  = var.ingestion_invoke_arn
 }
 
 resource "aws_apigatewayv2_route" "ingest_route" {
@@ -29,7 +29,7 @@ resource "aws_apigatewayv2_route" "ingest_route" {
 resource "aws_apigatewayv2_integration" "lambda_query" {
   api_id           = aws_apigatewayv2_api.video_api.id
   integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.query_lambda.invoke_arn
+  integration_uri  = var.query_invoke_arn
 }
 
 resource "aws_apigatewayv2_route" "query_route" {
@@ -41,7 +41,7 @@ resource "aws_apigatewayv2_route" "query_route" {
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ingestion.function_name
+  function_name = var.ingestion_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.video_api.execution_arn}/*/*"
 }

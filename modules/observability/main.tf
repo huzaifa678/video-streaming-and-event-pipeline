@@ -23,7 +23,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_dlq_alarm" {
   statistic           = "Sum"
   threshold           = 0
   dimensions = {
-    QueueName = aws_sqs_queue.video_events_dlq.name
+    QueueName = var.sqs_dlq_name
   }
 
   alarm_description = "Triggered when there are messages in SQS DLQ"
