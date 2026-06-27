@@ -25,8 +25,9 @@ resource "aws_glue_job" "rekognition_to_redshift" {
     "--job-language"              = "python"
     "--additional-python-modules" = "aws-xray-sdk"
     "--S3_INPUT_PATH"             = "s3://${var.rekognition_raw_bucket_name}/raw/rekognition/"
-    "--REDSHIFT_JDBC_URL"         = "jdbc:redshift://${var.redshift_endpoint}:5439/videoanalytics"
-    "--REDSHIFT_SECRET_ARN"       = var.redshift_secret_arn
+    # aws_redshift_cluster.endpoint already includes ":5439"
+    "--REDSHIFT_JDBC_URL"   = "jdbc:redshift://${var.redshift_endpoint}/videoanalytics"
+    "--REDSHIFT_SECRET_ARN" = var.redshift_secret_arn
   }
 
   # Run the worker inside the VPC so it can reach the private Redshift endpoint.
