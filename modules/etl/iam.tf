@@ -61,7 +61,10 @@ resource "aws_iam_policy" "glue_policy" {
           "ec2:DescribeSecurityGroups",
           "ec2:DescribeVpcs",
           "ec2:DescribeVpcEndpoints",
-          "ec2:DescribeRouteTables"
+          "ec2:DescribeRouteTables",
+          "ec2:DescribeTags",
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
         ]
         Resource = "*"
       },
