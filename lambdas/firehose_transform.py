@@ -3,9 +3,8 @@ import json
 import logging
 import os
 
+import boto3
 from aws_xray_sdk.core import xray_recorder, patch_all
-
-from python_layer.python import boto3
 
 patch_all()
 

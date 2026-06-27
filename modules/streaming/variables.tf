@@ -41,3 +41,17 @@ variable "firehose_transform_function_name" {
 variable "firehose_transform_arn" {
   type = string
 }
+
+variable "sqs_dlq_arn" {
+  type = string
+}
+
+variable "sqs_dlq_url" {
+  type = string
+}
+
+variable "healer_schedule" {
+  description = "EventBridge schedule expression for the KVS healer"
+  type        = string
+  default     = "rate(2 minutes)"
+}

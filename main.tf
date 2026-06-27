@@ -92,6 +92,9 @@ module "streaming" {
   rekognition_collection_id        = module.compute.rekognition_collection_id
   firehose_transform_function_name = module.compute.firehose_transform_function_name
   firehose_transform_arn           = module.compute.firehose_transform_arn
+
+  sqs_dlq_arn = module.messaging.sqs_dlq_arn
+  sqs_dlq_url = module.messaging.sqs_dlq_url
 }
 
 module "etl" {
