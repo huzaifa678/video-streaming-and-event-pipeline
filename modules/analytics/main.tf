@@ -16,6 +16,14 @@ resource "aws_redshift_cluster" "main" {
   cluster_type              = "single-node"
   skip_final_snapshot       = true
   cluster_subnet_group_name = aws_redshift_subnet_group.main.name
+
+  # ra3 clusters briefly enter "Maintenance" during create provider waits
+  # only for "Available" and times out unless we give it room.
+  timeouts {
+    create = "75m"
+    update = "75m"
+    delete = "40m"
+  }
 }
 
 resource "null_resource" "create_video_events_table" {
