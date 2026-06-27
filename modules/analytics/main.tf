@@ -17,12 +17,24 @@ resource "aws_redshift_cluster" "main" {
   skip_final_snapshot       = true
   cluster_subnet_group_name = aws_redshift_subnet_group.main.name
 
+  # ra3 clusters get these enabled by AWS post-create; mirror in config so
+  # the provider doesn't try to disable them on the next apply.
+  encrypted                            = true
+  availability_zone_relocation_enabled = true
+
   # ra3 clusters briefly enter "Maintenance" during create provider waits
   # only for "Available" and times out unless we give it room.
   timeouts {
     create = "75m"
     update = "75m"
     delete = "40m"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      encrypted,
+      availability_zone_relocation_enabled,
+    ]
   }
 }
 
