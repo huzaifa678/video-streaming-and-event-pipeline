@@ -62,6 +62,15 @@ resource "aws_iam_policy" "glue_policy" {
           "ec2:DescribeVpcs"
         ]
         Resource = "*"
+      },
+      {
+        # Required so the job can fetch its attached NETWORK connection.
+        Effect = "Allow"
+        Action = [
+          "glue:GetConnection",
+          "glue:GetConnections"
+        ]
+        Resource = "*"
       }
     ]
   })
