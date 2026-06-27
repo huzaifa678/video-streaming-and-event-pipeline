@@ -37,6 +37,7 @@ data "archive_file" "python_lib_zip" {
 resource "aws_lambda_layer_version" "python_dependencies" {
   layer_name          = "python-dependencies"
   filename            = data.archive_file.python_lib_zip.output_path
+  source_code_hash    = data.archive_file.python_lib_zip.output_base64sha256
   compatible_runtimes = ["python3.11"]
   description         = "Python dependencies for Lambdas"
 }

@@ -72,6 +72,21 @@ resource "aws_opensearch_domain" "video_events" {
   domain_name    = "${var.project_name}-video-events"
   engine_version = "OpenSearch_2.9"
 
+  timeouts {
+    delete = "60m"
+  }
+
+  # Wide-open resource policy; fine-grained access control handles authn/authz.
+  access_policies = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { AWS = "*" }
+      Action    = "es:*"
+      Resource  = "arn:aws:es:*:*:domain/${var.project_name}-video-events/*"
+    }]
+  })
+
   cluster_config {
     instance_type          = "t3.small.search"
     instance_count         = 2
