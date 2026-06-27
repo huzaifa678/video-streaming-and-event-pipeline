@@ -14,9 +14,28 @@ module "vpc" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
+  # Private subnets need egress to AWS APIs (Secrets Manager, STS, Glue, etc.)
+  # Single NAT gateway is cheaper than per-AZ.
+  enable_nat_gateway     = true
+  single_nat_gateway     = true
+  one_nat_gateway_per_az = false
+
   tags = {
     Terraform   = "true"
     Environment = var.env
+  }
+}
+
+# S3 Gateway endpoint — required by Glue's VPC connection validator and
+# also avoids NAT cost for S3 traffic (reads/writes from the job).
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-1.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = module.vpc.private_route_table_ids
+
+  tags = {
+    Name = "${var.project_name}-s3-gateway"
   }
 }
 
