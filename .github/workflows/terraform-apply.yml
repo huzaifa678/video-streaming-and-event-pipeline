@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 env:
-  TF_VERSION: "1.9.8"
+  TF_VERSION: "1.10.5"
   AWS_REGION: us-east-1
   PROJECT_NAME: video-analytics
 
