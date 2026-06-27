@@ -29,6 +29,9 @@ resource "aws_glue_job" "rekognition_to_redshift" {
     "--REDSHIFT_SECRET_ARN"       = var.redshift_secret_arn
   }
 
+  # Run the worker inside the VPC so it can reach the private Redshift endpoint.
+  connections = [aws_glue_connection.redshift_vpc.name]
+
   max_retries = 4
   timeout     = 120
 }

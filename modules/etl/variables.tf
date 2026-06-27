@@ -41,3 +41,16 @@ variable "sqs_dlq_arn" {
 variable "sqs_dlq_url" {
   type = string
 }
+
+variable "vpc_id" {
+  type = string
+}
+
+variable "private_subnet_id" {
+  description = "Subnet used by the Glue connection (must reach Redshift)"
+  type        = string
+}
+
+variable "redshift_security_group_id" {
+  type = string
+}

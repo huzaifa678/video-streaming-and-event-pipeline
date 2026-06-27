@@ -113,6 +113,10 @@ module "etl" {
 
   sqs_dlq_arn = module.messaging.sqs_dlq_arn
   sqs_dlq_url = module.messaging.sqs_dlq_url
+
+  vpc_id                     = module.networking.vpc_id
+  private_subnet_id          = module.networking.private_subnets[0]
+  redshift_security_group_id = module.analytics.redshift_security_group_id
 }
 
 module "api" {
