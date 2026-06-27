@@ -53,6 +53,21 @@ EOT
   }
 }
 
+resource "null_resource" "create_face_matches_table" {
+  depends_on = [aws_redshift_cluster.main]
+
+  provisioner "local-exec" {
+    command = <<EOT
+aws redshift-data execute-statement \
+    --cluster-identifier ${aws_redshift_cluster.main.cluster_identifier} \
+    --database videoanalytics \
+    --db-user ${aws_redshift_cluster.main.master_username} \
+    --sql "CREATE TABLE IF NOT EXISTS face_matches (video_stream VARCHAR(256), timestamp DOUBLE PRECISION, face_id VARCHAR(64) NOT NULL, similarity DOUBLE PRECISION NOT NULL);" \
+    --region ${var.aws_region}
+EOT
+  }
+}
+
 resource "aws_opensearch_domain" "video_events" {
   domain_name    = "${var.project_name}-video-events"
   engine_version = "OpenSearch_2.9"
