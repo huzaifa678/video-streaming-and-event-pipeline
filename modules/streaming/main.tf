@@ -33,10 +33,7 @@ resource "aws_rekognition_stream_processor" "video_processor" {
     opt_in = false
   }
 
-  provisioner "local-exec" {
-    command = "sleep 20 && aws rekognition start-stream-processor --name ${self.name} --region ${var.aws_region}"
-  }
-
+  # handled by github actions pipeline
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [data_sharing_preference]
